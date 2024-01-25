@@ -2,27 +2,26 @@ import {ApiError} from '../utils/ApiError.js';
 import {ApiResponse} from '../utils/ApiResponse.js';
 import {asyncHandler} from '../utils/asyncHandler.js';
 import {Task} from '../models/task.model.js';
-import {calculateTaskPriority, isNotPastDate} from '../utils/helper.js';
+import {SubTask} from '../models/subTask.model.js';
+import {
+    calculateTaskPriority,
+    isNotPastDate,
+    isValidDate,
+} from '../utils/helper.js';
 import mongoose from 'mongoose';
 
 const createTask = asyncHandler(async (req, res) => {
     const {title, description, due_date} = req.body;
 
     if ([title, description, due_date].some((field) => field?.trim === '')) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'Title, description and due date are required'
-                )
-            );
+        throw new ApiError(
+            400,
+            'Title, description, and due date are required'
+        );
     }
 
-    if (isNotPastDate(due_date) === false) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Due date cannot be in the past'));
+    if (isNotPastDate(due_date) === false && isValidDate(due_date) === false) {
+        throw new ApiError(400, 'Due date cannot be in the past or invalid');
     }
 
     const task = await Task.create({
@@ -34,9 +33,7 @@ const createTask = asyncHandler(async (req, res) => {
     });
 
     if (!task) {
-        return res
-            .status(500)
-            .json(new ApiError(500, 'Task not created due to server error'));
+        throw new ApiError(500, 'Unable to create task due to server error');
     }
 
     return res
@@ -80,6 +77,9 @@ const getAllUserTasks = asyncHandler(async (req, res) => {
     });
 
     if (due_date) {
+        if (!isValidDate(due_date)) {
+            throw new ApiError(400, 'Invalid due date');
+        }
         aggregate.match({
             due_date: new Date(due_date),
         });
@@ -114,26 +114,22 @@ const updateTask = asyncHandler(async (req, res) => {
     let {due_date, status} = req.body;
 
     if (!due_date && !status) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Due date or status is required'));
+        throw new ApiError(400, 'Due date or status is required');
     }
 
     if (isValidObjectId(task_id) === false) {
-        return res.status(400).json(new ApiError(400, 'Invalid task ID'));
+        throw new ApiError(400, 'Invalid task ID');
     }
 
     if (status) {
         status = String(status).toUpperCase();
         if (!['TODO', 'DONE'].includes(status)) {
-            return res.status(400).json(new ApiError(400, 'Invalid status'));
+            throw new ApiError(400, 'Invalid status');
         }
     }
 
-    if (isNotPastDate(due_date) === false) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Due date cannot be in the past'));
+    if (isNotPastDate(due_date) === false || isValidDate(due_date) === false) {
+        throw new ApiError(400, 'Due date cannot be in the past or invalid');
     }
 
     const task = await Task.findOne({
@@ -142,16 +138,26 @@ const updateTask = asyncHandler(async (req, res) => {
     });
 
     if (!task) {
-        return res.status(404).json(new ApiError(404, 'Task not found'));
+        throw new ApiError(404, 'Task not found');
     }
 
-    if (due_date) {
+    if (due_date && isNotPastDate(due_date)) {
         task.due_date = due_date;
         task.priority = calculateTaskPriority(due_date);
     }
 
     if (status) {
         task.status = status;
+        if (status === 'DONE') {
+            await SubTask.updateMany(
+                {
+                    task_id: task._id,
+                },
+                {
+                    status: 1,
+                }
+            );
+        }
     }
 
     const updatedTask = await task.save();
@@ -165,13 +171,13 @@ const deleteTask = asyncHandler(async (req, res) => {
     const {task_id} = req.params;
 
     if (isValidObjectId(task_id) === false) {
-        return res.status(400).json(new ApiError(400, 'Invalid task ID'));
+        throw new ApiError(400, 'Invalid task ID');
     }
 
     const task = await Task.findOneAndUpdate(
         {
             _id: task_id,
-            user: req.user.id,
+            user: new mongoose.Types.ObjectId(req.user._id),
         },
         {
             deletedAt: Date.now(),
@@ -182,12 +188,27 @@ const deleteTask = asyncHandler(async (req, res) => {
     );
 
     if (!task) {
-        return res.status(404).json(new ApiError(404, 'Task not found'));
+        throw new ApiError(404, 'Task not found');
     }
+
+    await SubTask.updateMany(
+        {
+            task_id: task._id,
+        },
+        {
+            deletedAt: Date.now(),
+        }
+    );
 
     return res
         .status(200)
-        .json(new ApiResponse(200, task, 'Task deleted successfully'));
+        .json(
+            new ApiResponse(
+                200,
+                task,
+                'Task deleted successfully with all subtasks'
+            )
+        );
 });
 
 export {createTask, getAllUserTasks, updateTask, deleteTask};

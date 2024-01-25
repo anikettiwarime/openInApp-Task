@@ -11,9 +11,9 @@ import {
 } from '../controllers/subTask.controller.js';
 
 router.route('/').get(verifyJWT, getAllSubTask).post(verifyJWT, createSubTask);
+router.route('/:task_id').get(verifyJWT, getSubTask);
 router
-    .route('/:task_id')
-    .get(verifyJWT, getSubTask)
+    .route('/:sub_task_id')
     .patch(verifyJWT, updateSubTask)
     .delete(verifyJWT, deleteSubTask);
 

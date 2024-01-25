@@ -30,3 +30,11 @@ export const isNotPastDate = (date) => {
 
     return due >= today;
 };
+
+export const isValidDate = (dateStr) => {
+    const newDate = new Date(dateStr);
+    return (
+        !isNaN(newDate.getTime()) &&
+        newDate.toISOString().slice(0, 10) === dateStr
+    );
+};
