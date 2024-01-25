@@ -105,9 +105,39 @@ const updateSubTask = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Sub task not found');
     }
 
+    const subTasksWithSameTaskId = await SubTask.find({
+        task_id: subTask.task_id,
+    });
+
+    const uniqueTaskStatuses = [
+        ...new Set(subTasksWithSameTaskId.map((subTask) => subTask.status)),
+    ];
+
+    let TaskStatus = 'TODO';
+
+    if (uniqueTaskStatuses.length === 1) {
+        if (uniqueTaskStatuses[0] === 1) {
+            TaskStatus = 'DONE';
+        }
+    } else {
+        TaskStatus = 'IN_PROGRESS';
+    }
+
+    const task = await Task.findOneAndUpdate(
+        {_id: subTask.task_id},
+        {status: TaskStatus},
+        {new: true}
+    );
+
     return res
         .status(200)
-        .json(new ApiResponse(200, subTask, 'Sub task fetched successfully'));
+        .json(
+            new ApiResponse(
+                200,
+                {subTask, task},
+                'Sub task updated successfully'
+            )
+        );
 });
 
 const deleteSubTask = asyncHandler(async (req, res) => {
