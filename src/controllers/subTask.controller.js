@@ -39,12 +39,12 @@ const getAllSubTask = asyncHandler(async (req, res) => {
     const tasks = await Task.find({user: req.user._id});
     const taskIds = tasks.map((task) => task._id);
 
-    const subTasks = await SubTask.find({ task_id: { $in: taskIds } });
-    
+    const subTasks = await SubTask.find({task_id: {$in: taskIds}});
+
     const data = {
         subTasks,
-        totalSubTasks: subTasks.length
-    }
+        totalSubTasks: subTasks.length,
+    };
 
     return res
         .status(200)
