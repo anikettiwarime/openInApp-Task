@@ -1,11 +1,20 @@
 import {Schema, model} from 'mongoose';
+import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 
 const subTaskSchema = new Schema(
     {
         task_id: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'Task',
             required: true,
+        },
+        title: {
+            type: String,
+            required: true,
+        },
+        description: {
+            type: String,
+            default: null,
         },
         status: {
             type: Number,
@@ -22,4 +31,6 @@ const subTaskSchema = new Schema(
     }
 );
 
-export default model('SubTask', subTaskSchema);
+subTaskSchema.plugin(mongooseAggregatePaginate);
+
+export const SubTask = model('SubTask', subTaskSchema);

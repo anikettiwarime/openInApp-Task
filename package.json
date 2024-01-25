@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node --env-file=.env src/index.js",
     "dev": "nodemon --env-file=.env src/index.js",
+    "dev:prettier": "nodemon --env-file=.env -x \"npm run prettier && node\" src/index.js",
     "prettier": "prettier --write \"src/**/*.js\""
   },
   "keywords": [
@@ -26,7 +27,8 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.1.0"
+    "mongoose": "^8.1.0",
+    "mongoose-aggregate-paginate-v2": "^1.0.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.3",
