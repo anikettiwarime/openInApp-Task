@@ -185,28 +185,36 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, req.user, 'User fetched successfully'));
 });
 
-const updateUser = asyncHandler(async (req, res) => {
-    const {fullname, email} = req.body;
+// const updateUserPhoneNumber = asyncHandler(async (req, res) => {
+//     const {phone_number} = req.body;
 
-    if (!fullname || !email) {
-        throw new ApiError(400, 'Fullname and email is required');
-    }
+//     if (!phone_number) {
+//         throw new ApiError(400, 'Phone number is required');
+//     }
 
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set: {
-                fullname,
-                email,
-            },
-        },
-        {new: true}
-    );
+//     const existedUser = await User.exists({phone_number});
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, user, 'User updated successfully'));
-});
+//     if (existedUser) {
+//         throw new ApiError(
+//             409,
+//             'User with given phone number already exists in database'
+//         );
+//     }
+
+//     const user = await User.findByIdAndUpdate(
+//         req.user?._id,
+//         {
+//             $set: {
+//                 phone_number,
+//             },
+//         },
+//         {new: true}
+//     );
+
+//     return res
+//         .status(200)
+//         .json(new ApiResponse(200, user, 'User phone number updated'));
+// });
 
 export {
     registerUser,
@@ -214,5 +222,5 @@ export {
     logoutUser,
     refreshAccessToken,
     getCurrentUser,
-    updateUser,
+    // updateUserPhoneNumber,
 };
