@@ -8,12 +8,14 @@ import {
     getSubTask,
     updateSubTask,
     deleteSubTask,
+    getAllSubTaskByTaskId
 } from '../controllers/subTask.controller.js';
 
 router.route('/').get(verifyJWT, getAllSubTask).post(verifyJWT, createSubTask);
-router.route('/:task_id').get(verifyJWT, getSubTask);
+router.route('/:task_id').get(verifyJWT, getAllSubTaskByTaskId);
 router
     .route('/:sub_task_id')
+    .get(verifyJWT, getSubTask)
     .patch(verifyJWT, updateSubTask)
     .delete(verifyJWT, deleteSubTask);
 

@@ -36,10 +36,34 @@ const createSubTask = asyncHandler(async (req, res) => {
 });
 
 const getAllSubTask = asyncHandler(async (req, res) => {
-    const tasks = await Task.find({user: req.user._id});
+    const tasks = await Task.find({user: req.user._id, deletedAt: null});
     const taskIds = tasks.map((task) => task._id);
 
-    const subTasks = await SubTask.find({task_id: {$in: taskIds}});
+    const subTasks = await SubTask.find({
+        task_id: {$in: taskIds},
+    });
+    const data = {
+        subTasks: subTasks.filter((subTask) => subTask.deletedAt === null),
+        totalSubTasks: subTasks.length,
+    };
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, data, 'Sub tasks fetched successfully'));
+});
+
+const getAllSubTaskByTaskId = asyncHandler(async (req, res) => {
+    const {task_id} = req.params;
+    const task = await Task.findOne({
+        _id: task_id,
+        user: req.user._id,
+        deletedAt: null,
+    });
+    if (!task) {
+        throw new ApiError(404, 'Task not found');
+    }
+
+    const subTasks = await SubTask.find({task_id: task_id, deletedAt: null});
 
     const data = {
         subTasks,
@@ -52,23 +76,25 @@ const getAllSubTask = asyncHandler(async (req, res) => {
 });
 
 const getSubTask = asyncHandler(async (req, res) => {
-    const {task_id} = req.params;
+    const {sub_task_id} = req.params;
 
-    if (isValidObjectId(task_id) === false) {
-        throw new ApiError(400, 'Invalid task ID');
+    if (isValidObjectId(sub_task_id) === false) {
+        throw new ApiError(400, 'Invalid sub task ID');
     }
 
-    const subTask = await SubTask.findOne({_id: task_id});
+    const subTask = await SubTask.findOne({_id: sub_task_id, deletedAt: null});
     if (!subTask) {
         throw new ApiError(404, 'Sub task not found');
     }
 
-    if (subTask.deletedAt !== null) {
-        throw new ApiError(404, 'Sub task deleted');
-    }
+    const task = await Task.findOne({
+        _id: subTask.task_id,
+        deletedAt: null,
+        user: req.user._id,
+    });
 
-    if (subTask.task_id !== req.user._id) {
-        throw new ApiError(403, 'Forbidden');
+    if (!task) {
+        throw new ApiError(404, 'Task is deleted or not found');
     }
 
     return res
@@ -162,4 +188,11 @@ const deleteSubTask = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, subTask, 'Sub task fetched successfully'));
 });
 
-export {createSubTask, getAllSubTask, getSubTask, updateSubTask, deleteSubTask};
+export {
+    createSubTask,
+    getAllSubTask,
+    getAllSubTaskByTaskId,
+    getSubTask,
+    updateSubTask,
+    deleteSubTask,
+};
