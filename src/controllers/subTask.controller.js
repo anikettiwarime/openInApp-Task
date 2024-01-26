@@ -16,6 +16,12 @@ const createSubTask = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Invalid task ID');
     }
 
+    const task = await Task.findOne({ _id: task_id, deletedAt: null, user: req.user._id });
+
+    if (!task) {
+        throw new ApiError(404, 'Task not found');
+    }
+
     const subTask = await SubTask.create({
         task_id,
         title,
@@ -54,6 +60,14 @@ const getAllSubTask = asyncHandler(async (req, res) => {
 
 const getAllSubTaskByTaskId = asyncHandler(async (req, res) => {
     const {task_id} = req.params;
+    if (!task_id) {
+        throw new ApiError(400, 'Task ID is required');
+    }
+
+    if (isValidObjectId(task_id) === false) {
+        throw new ApiError(400, 'Invalid task ID');
+    }
+
     const task = await Task.findOne({
         _id: task_id,
         user: req.user._id,
