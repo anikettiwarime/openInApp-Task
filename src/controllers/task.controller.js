@@ -8,8 +8,9 @@ import {
     isNotPastDate,
     isValidDate,
 } from '../utils/helper.js';
-import mongoose from 'mongoose';
+import mongoose, {isValidObjectId} from 'mongoose';
 
+// Create a task for a user
 const createTask = asyncHandler(async (req, res) => {
     const {title, description, due_date} = req.body;
 
@@ -47,6 +48,7 @@ const createTask = asyncHandler(async (req, res) => {
         );
 });
 
+// Get all tasks for a user
 const getAllUserTasks = asyncHandler(async (req, res) => {
     const {page = 1, limit = 10, priority, due_date, status} = req.query;
 
@@ -84,6 +86,50 @@ const getAllUserTasks = asyncHandler(async (req, res) => {
             due_date: new Date(due_date),
         });
     }
+
+    aggregate.lookup({
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+        pipeline: [
+            {
+                $project: {
+                    _id: 1,
+                    phone_number: 1,
+                    priority: 1,
+                },
+            },
+        ],
+    });
+
+    aggregate.lookup({
+        from: 'subtasks',
+        localField: '_id',
+        foreignField: 'task_id',
+        as: 'subTasks',
+        pipeline: [
+            {
+                $match: {
+                    deletedAt: null,
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    description: 1,
+                    due_date: 1,
+                    priority: 1,
+                    status: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                },
+            },
+        ],
+    });
+
+
     aggregate.project({
         _id: 1,
         title: 1,
@@ -94,7 +140,10 @@ const getAllUserTasks = asyncHandler(async (req, res) => {
         createdAt: 1,
         updatedAt: 1,
         deletedAt: 1,
-        user: 1,
+        user: {
+            $arrayElemAt: ['$user', 0],
+        },
+        subTasks: 1,
     });
 
     // Execute the aggregate query
@@ -109,6 +158,7 @@ const getAllUserTasks = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, tasks, 'Tasks found'));
 });
 
+// Update a task for a user
 const updateTask = asyncHandler(async (req, res) => {
     const {task_id} = req.params;
     let {due_date, status} = req.body;
@@ -128,6 +178,7 @@ const updateTask = asyncHandler(async (req, res) => {
         }
     }
 
+    // Check if due date is valid
     if (isNotPastDate(due_date) === false || isValidDate(due_date) === false) {
         throw new ApiError(400, 'Due date cannot be in the past or invalid');
     }
@@ -167,6 +218,7 @@ const updateTask = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updatedTask, 'Task updated successfully'));
 });
 
+// Delete a task for a user
 const deleteTask = asyncHandler(async (req, res) => {
     const {task_id} = req.params;
 
