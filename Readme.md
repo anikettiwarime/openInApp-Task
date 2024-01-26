@@ -2,6 +2,11 @@
 
 Welcome to the documentation for the Task Manager API. This API provides functionalities for managing tasks, subtasks, user authentication, and more. Below, you'll find details about the key features, input requirements, utility functions, and scheduled tasks (cron jobs) implemented in the API.
 
+
+## Postman Collection
+- **Postman Collection:** 
+  - *[https://documenter.getpostman.com/view/22930511/2s9YypGPPU](https://documenter.getpostman.com/view/22930511/2s9YypGPPU)*
+
 ## Features
 
 ### User Authentication
