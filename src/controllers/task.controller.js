@@ -129,7 +129,6 @@ const getAllUserTasks = asyncHandler(async (req, res) => {
         ],
     });
 
-
     aggregate.project({
         _id: 1,
         title: 1,
@@ -206,6 +205,15 @@ const updateTask = asyncHandler(async (req, res) => {
                 },
                 {
                     status: 1,
+                }
+            );
+        } else if (status === 'TODO') {
+            await SubTask.updateMany(
+                {
+                    task_id: task._id,
+                },
+                {
+                    status: 0,
                 }
             );
         }

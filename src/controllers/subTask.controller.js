@@ -1,12 +1,12 @@
-import { ApiError } from '../utils/ApiError.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { SubTask } from '../models/subTask.model.js';
-import { Task } from '../models/task.model.js';
-import { isValidObjectId } from 'mongoose';
+import {ApiError} from '../utils/ApiError.js';
+import {ApiResponse} from '../utils/ApiResponse.js';
+import {asyncHandler} from '../utils/asyncHandler.js';
+import {SubTask} from '../models/subTask.model.js';
+import {Task} from '../models/task.model.js';
+import {isValidObjectId} from 'mongoose';
 
 const createSubTask = asyncHandler(async (req, res) => {
-    const { task_id, title, description } = req.body;
+    const {task_id, title, description} = req.body;
 
     if ([task_id, title, description].some((field) => field?.trim === '')) {
         throw new ApiError(400, 'Task ID, title, and description are required');
@@ -46,11 +46,11 @@ const createSubTask = asyncHandler(async (req, res) => {
 });
 
 const getAllSubTask = asyncHandler(async (req, res) => {
-    const tasks = await Task.find({ user: req.user._id, deletedAt: null });
+    const tasks = await Task.find({user: req.user._id, deletedAt: null});
     const taskIds = tasks.map((task) => task._id);
 
     const subTasks = await SubTask.find({
-        task_id: { $in: taskIds },
+        task_id: {$in: taskIds},
     });
     const data = {
         subTasks: subTasks.filter((subTask) => subTask.deletedAt === null),
@@ -63,7 +63,7 @@ const getAllSubTask = asyncHandler(async (req, res) => {
 });
 
 const getAllSubTaskByTaskId = asyncHandler(async (req, res) => {
-    const { task_id } = req.params;
+    const {task_id} = req.params;
     if (!task_id) {
         throw new ApiError(400, 'Task ID is required');
     }
@@ -81,7 +81,7 @@ const getAllSubTaskByTaskId = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Task not found');
     }
 
-    const subTasks = await SubTask.find({ task_id: task_id, deletedAt: null });
+    const subTasks = await SubTask.find({task_id: task_id, deletedAt: null});
 
     const data = {
         subTasks,
@@ -94,13 +94,13 @@ const getAllSubTaskByTaskId = asyncHandler(async (req, res) => {
 });
 
 const getSubTask = asyncHandler(async (req, res) => {
-    const { sub_task_id } = req.params;
+    const {sub_task_id} = req.params;
 
     if (isValidObjectId(sub_task_id) === false) {
         throw new ApiError(400, 'Invalid sub task ID');
     }
 
-    const subTask = await SubTask.findOne({ _id: sub_task_id, deletedAt: null });
+    const subTask = await SubTask.findOne({_id: sub_task_id, deletedAt: null});
     if (!subTask) {
         throw new ApiError(404, 'Sub task not found');
     }
@@ -121,7 +121,7 @@ const getSubTask = asyncHandler(async (req, res) => {
 });
 
 const updateSubTask = asyncHandler(async (req, res) => {
-    const { sub_task_id } = req.params;
+    const {sub_task_id} = req.params;
 
     if (!sub_task_id) {
         throw new ApiError(400, 'Sub task ID is required');
@@ -129,7 +129,7 @@ const updateSubTask = asyncHandler(async (req, res) => {
     if (isValidObjectId(sub_task_id) === false) {
         throw new ApiError(400, 'Invalid sub task ID');
     }
-    const { status } = req.body;
+    const {status} = req.body;
 
     if (!status) {
         throw new ApiError(400, 'Status is required');
@@ -141,9 +141,9 @@ const updateSubTask = asyncHandler(async (req, res) => {
     }
 
     const subTask = await SubTask.findOneAndUpdate(
-        { _id: sub_task_id },
-        { status },
-        { new: true }
+        {_id: sub_task_id},
+        {status},
+        {new: true}
     );
 
     if (!subTask) {
@@ -152,6 +152,7 @@ const updateSubTask = asyncHandler(async (req, res) => {
 
     const subTasksWithSameTaskId = await SubTask.find({
         task_id: subTask.task_id,
+        deletedAt: null,
     });
 
     const uniqueTaskStatuses = [
@@ -169,9 +170,9 @@ const updateSubTask = asyncHandler(async (req, res) => {
     }
 
     const task = await Task.findOneAndUpdate(
-        { _id: subTask.task_id },
-        { status: TaskStatus },
-        { new: true }
+        {_id: subTask.task_id},
+        {status: TaskStatus},
+        {new: true}
     );
 
     return res
@@ -179,28 +180,57 @@ const updateSubTask = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { subTask, task },
+                {subTask, task},
                 'Sub task updated successfully'
             )
         );
 });
 
 const deleteSubTask = asyncHandler(async (req, res) => {
-    const { sub_task_id } = req.params;
+    const {sub_task_id} = req.params;
 
     if (!sub_task_id) {
         throw new ApiError(400, 'Sub task ID is required');
     }
 
     if (isValidObjectId(sub_task_id) === false) {
-        return res.status(400).json(new ApiError(400, 'Invalid sub task ID'));
+        throw new ApiError(400, 'Invalid sub task ID');
     }
 
-    const subTask = await SubTask.findOneAndDelete({ _id: sub_task_id });
+    const subTask = await SubTask.findOneAndUpdate(
+        {_id: sub_task_id},
+        {deletedAt: Date.now()},
+        {new: true}
+    );
 
     if (!subTask) {
-        return res.status(404).json(new ApiError(404, 'Sub task not found'));
+        throw new ApiError(404, 'Sub task not found');
     }
+
+    const subTasksWithSameTaskId = await SubTask.find({
+        task_id: subTask.task_id,
+        deletedAt: null,
+    });
+
+    const uniqueTaskStatuses = [
+        ...new Set(subTasksWithSameTaskId.map((subTask) => subTask.status)),
+    ];
+
+    let TaskStatus = 'TODO';
+
+    if (uniqueTaskStatuses.length === 1) {
+        if (uniqueTaskStatuses[0] === 1) {
+            TaskStatus = 'DONE';
+        }
+    } else {
+        TaskStatus = 'IN_PROGRESS';
+    }
+
+    const task = await Task.findOneAndUpdate(
+        {_id: subTask.task_id},
+        {status: TaskStatus},
+        {new: true}
+    );
 
     return res
         .status(200)
